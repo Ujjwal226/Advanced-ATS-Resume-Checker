@@ -1,26 +1,26 @@
 import streamlit as st
 import os
-import sqlite3 # Import the sqlite3 library
-import re # Import regex for keyword highlighting
+import sqlite3 
+import re 
 from dotenv import load_dotenv
 import google.generativeai as genai
 from PyPDF2 import PdfReader
 
-# Load environment variables and configure API
+
 load_dotenv()
 genai.configure(api_key=os.getenv("GOOGLE_API_KEY"))
 model = genai.GenerativeModel("gemini-1.5-flash")
 
-# Define the path for the SQLite database file
+
 DB_FILE = "feedback.db"
 
-# Initialize session state for storing resume text and analysis results
+
 if 'pdf_text' not in st.session_state:
     st.session_state.pdf_text = ""
 if 'analysis_results' not in st.session_state:
     st.session_state.analysis_results = ""
 
-# Function to create database connection
+
 def create_connection(db_file):
     conn = None
     try:
@@ -30,7 +30,7 @@ def create_connection(db_file):
         st.error(f"Database error: {e}")
     return conn
 
-# Function to create the feedback table
+
 def create_feedback_table(conn):
     try:
         c = conn.cursor()
@@ -45,7 +45,7 @@ def create_feedback_table(conn):
     except sqlite3.Error as e:
         st.error(f"Error creating table: {e}")
 
-# Function to insert feedback
+
 def insert_feedback(feedback_text):
     conn = create_connection(DB_FILE)
     if conn is not None:
@@ -61,18 +61,18 @@ def insert_feedback(feedback_text):
             return False
     return False
 
-# Initialize the database and create table on app startup
+
 conn = create_connection(DB_FILE)
 if conn:
     create_feedback_table(conn)
     conn.close()
 
-# Function to get Gemini output
+
 def get_gemini_output(pdf_text, prompt):
     response = model.generate_content([pdf_text, prompt])
     return response.text
 
-# Function to read PDF
+
 def read_pdf(uploaded_file):
     if uploaded_file is not None:
         pdf_reader = PdfReader(uploaded_file)
@@ -81,13 +81,13 @@ def read_pdf(uploaded_file):
             pdf_text += page.extract_text()
         return pdf_text
     else:
-        st.error("No file uploaded") # Use st.error here for better visibility
+        st.error("No file uploaded") 
         return ""
 
-# Streamlit UI
+
 st.set_page_config(page_title="ResumeChecker", layout="wide")
 
-# Custom CSS for an enhanced, clean design
+
 st.markdown("""
     <style>
     /* Main content area styling */
@@ -224,42 +224,42 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-# Main content layout
+
 st.title("ResumeChecker")
 st.subheader("Optimize Your Resume for ATS and Get Hired")
 
-# Add some spacing
+
 st.markdown("\n")
 
-# File upload section
-st.write("Upload your resume below:") # Add a descriptive label
-upload_file = st.file_uploader("", type=["pdf"], label_visibility="collapsed") # Hide default label
 
-# Add some spacing
+st.write("Upload your resume below:") 
+upload_file = st.file_uploader("", type=["pdf"], label_visibility="collapsed") 
+
+
 st.markdown("\n")
 
-# Job description input section
-st.write("Enter the job description (optional):") # Add a descriptive label
-job_description = st.text_area("", height=150, label_visibility="collapsed") # Hide default label and set height
 
-# Add some spacing
+st.write("Enter the job description (optional):") 
+job_description = st.text_area("", height=150, label_visibility="collapsed") 
+
+
 st.markdown("\n")
 
-# Analysis options section
-st.write("Choose analysis type:") # Add a descriptive label
+
+st.write("Choose analysis type:") #
 analysis_option = st.radio("", 
-                           ["Quick Scan", "Detailed Analysis", "ATS Optimization"], horizontal=True, label_visibility="collapsed") # Hide default label and make horizontal
+                           ["Quick Scan", "Detailed Analysis", "ATS Optimization"], horizontal=True, label_visibility="collapsed")
 
-# Add some spacing
+
 st.markdown("\n")
 
-# Analyze button
-if st.button("Analyze Resume", use_container_width=True): # Make button full width
+
+if st.button("Analyze Resume", use_container_width=True): 
     if upload_file is not None:
         pdf_text = read_pdf(upload_file)
-        st.session_state.pdf_text = pdf_text # Store pdf_text in session state
+        st.session_state.pdf_text = pdf_text 
         
-        if pdf_text: # Proceed only if text was successfully extracted
+        if pdf_text: 
             if analysis_option == "Quick Scan":
                 prompt = f"""
                 You are ResumeChecker, an expert in resume analysis. Provide a quick scan of the following resume. Structure your response using Markdown headings.
@@ -304,7 +304,7 @@ if st.button("Analyze Resume", use_container_width=True): # Make button full wid
                 Resume text: {pdf_text}
                 Job description (if provided): {job_description}
                 """
-            else:  # ATS Optimization
+            else:  
                 prompt = f"""
                 You are ResumeChecker, an expert in ATS optimization. Analyze the following resume and provide optimization suggestions for the given job description. Structure your response using Markdown headings for each section. Specifically, provide lists of keywords as requested.
                 
@@ -334,15 +334,15 @@ if st.button("Analyze Resume", use_container_width=True): # Make button full wid
                 """
             
             response = get_gemini_output(pdf_text, prompt)
-            st.session_state.analysis_results = response # Store analysis results in session state
+            st.session_state.analysis_results = response 
             
             st.subheader("Analysis Results")
-            # Display results using markdown for structured output
+            
             st.markdown(st.session_state.analysis_results)
             
-            # --- Keyword Analysis Enhancement (for ATS Optimization) ---
+          
             if analysis_option == "ATS Optimization":
-                # Parse the response to find keyword sections
+                
                 response_sections = response.split("## ")
                 keywords_found_section = ""
                 missing_keywords_section = ""
@@ -353,35 +353,35 @@ if st.button("Analyze Resume", use_container_width=True): # Make button full wid
                     elif section.strip().startswith("Missing Keywords"):
                         missing_keywords_section = section.replace("Missing Keywords", "", 1).strip()
 
-                # Extract keywords found in resume
+                
                 found_keywords = []
-                # Simple parsing assuming keywords are listed line by line or comma separated
+               
                 if keywords_found_section:
-                     # Split by lines and then by commas, handling potential list markers like - or *
+                    
                     lines = keywords_found_section.split('\n')
                     for line in lines:
-                        # Remove common list markers and whitespace
+                        
                         cleaned_line = re.sub(r'^[-*\s]*', '', line).strip()
                         if cleaned_line:
-                            # Split by commas outside of potential phrases in quotes (simple approach)
+                           
                             for keyword in re.split(r',\s*', cleaned_line):
                                 if keyword:
                                     found_keywords.append(keyword.strip())
 
-                # Display original text with keywords highlighted in an expander
+           
                 if st.session_state.pdf_text and found_keywords:
                     with st.expander("View Resume Text with Found Keywords Highlighted"):
                         highlighted_text = highlight_keywords(st.session_state.pdf_text, found_keywords)
                         st.markdown(highlighted_text, unsafe_allow_html=True)
 
-                # Display missing keywords
+                
                 if missing_keywords_section:
                     st.subheader("Missing Keywords from Job Description")
-                    # Display as markdown, assuming the AI formatted it as a list
+                  
                     st.markdown(missing_keywords_section)
-            # --- End Keyword Analysis Enhancement ---
+      
             
-            # Option to chat about the resume
+            
             st.subheader("Have questions about your resume?")
             user_question = st.text_input("Ask me anything about your resume or the analysis:")
             if user_question:
@@ -399,22 +399,22 @@ if st.button("Analyze Resume", use_container_width=True): # Make button full wid
     else:
         st.error("Please upload a resume to analyze.")
 
-# Add a section for the text editor
+
 st.subheader("Edit Resume Text")
 st.write("Edit the extracted resume text below:")
 edited_text = st.text_area(
     "", 
     value=st.session_state.pdf_text, 
     height=400, 
-    key="resume_editor", # Use a unique key
+    key="resume_editor", 
     label_visibility="collapsed"
 )
 
-# Update the session state with the edited text whenever it changes
+
 st.session_state.pdf_text = edited_text
 
-# Download button for the edited text
-if st.button("Download Edited Text"): # Changed button label
+
+if st.button("Download Edited Text"): 
     if edited_text:
         st.download_button(
             label="Click to Download",
@@ -425,7 +425,7 @@ if st.button("Download Edited Text"): # Changed button label
     else:
         st.warning("No text to download.")
 
-# Additional resources (in sidebar)
+
 st.sidebar.title("Resources")
 st.sidebar.markdown("""
 - [Resume Writing Tips](https://careerservices.fas.harvard.edu/resources/create-a-strong-resume/)
@@ -433,37 +433,33 @@ st.sidebar.markdown("""
 - [Interview Preparation](https://hbr.org/2021/11/10-common-job-interview-questions-and-how-to-answer-them)
 """)
 
-# Feedback form (in sidebar)
+
 st.sidebar.title("Feedback")
-st.sidebar.markdown("Help us improve! Leave your feedback:") # Use markdown for the label
-# Use a key for the text area to retrieve its value
-feedback_text = st.sidebar.text_area("", key="feedback_input", label_visibility="collapsed") # Hide default label
+st.sidebar.markdown("Help us improve! Leave your feedback:") 
+
+feedback_text = st.sidebar.text_area("", key="feedback_input", label_visibility="collapsed") 
 
 if st.sidebar.button("Submit Feedback", use_container_width=True):
     if feedback_text:
         if insert_feedback(feedback_text):
             st.sidebar.success("Thank you for your feedback! It has been stored in the database.")
-            # Note: Clearing the text area requires a rerun of the script
-            # st.session_state.feedback_input = "" # This would require a slightly different approach with text_area default value
+            
         else:
             st.sidebar.warning("Please enter some feedback before submitting.")
     else:
         st.sidebar.warning("Please enter some feedback before submitting.")
 
-# Function to highlight keywords in text
+
 def highlight_keywords(text, keywords):
     if not keywords:
         return text
 
-    # Sort keywords by length in descending order to highlight longer phrases first
+    
     sorted_keywords = sorted(keywords, key=len, reverse=True)
     highlighted_text = text
 
     for keyword in sorted_keywords:
-        # Use regex to find whole word matches, case-insensitive
-        # re.escape handles special characters in keywords
-        # \b ensures word boundaries
-        # Use a lambda function in re.sub to preserve the original casing of the matched word
+       
         try:
             pattern = r'\b(' + re.escape(keyword) + r')\b'
             highlighted_text = re.sub(
@@ -474,7 +470,7 @@ def highlight_keywords(text, keywords):
             )
         except re.error as e:
             st.warning(f"Error highlighting keyword '{keyword}': {e}")
-            # If regex compilation fails for a keyword, skip it
+            
             continue
 
     return highlighted_text
